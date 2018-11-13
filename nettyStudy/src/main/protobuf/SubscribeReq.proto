@@ -1,0 +1,10 @@
+syntax = "proto2";
+option java_package="cn.lch.learn.code.netty.serializable.protobuf";
+option java_outer_classname="SubcribeReqProte";
+message SubcribeReq{
+	required int32 subReqID =1;
+	required string userName =2;
+	required string preductName =3;
+	required string address =4;
+
+}
