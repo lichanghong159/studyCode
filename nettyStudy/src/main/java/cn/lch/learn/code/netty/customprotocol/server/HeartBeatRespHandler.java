@@ -13,54 +13,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.lch.learn.code.netty.customprotocol.codec;
+package cn.lch.learn.code.netty.customprotocol.server;
 
+import cn.lch.learn.code.netty.customprotocol.MessageType;
 import cn.lch.learn.code.netty.customprotocol.struct.Header;
 import cn.lch.learn.code.netty.customprotocol.struct.NettyMessage;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Lilinfeng
  * @date 2014年3月15日
  * @version 1.0
  */
-public class NettyMessageDecoder extends LengthFieldBasedFrameDecoder {
+public class HeartBeatRespHandler extends ChannelInboundHandlerAdapter {
 
-    MarshallingDecoder marshallingDecoder;
+	private static final Logger LOG = LoggerFactory.getLogger(HeartBeatRespHandler.class);
 
-    public NettyMessageDecoder(int maxFrameLength, int lengthFieldOffset,
-	    int lengthFieldLength) throws IOException {
-	super(maxFrameLength, lengthFieldOffset, lengthFieldLength);
-	marshallingDecoder = new MarshallingDecoder();
-    }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, ByteBuf in)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
 	    throws Exception {
-	ByteBuf frame = (ByteBuf) super.decode(ctx, in);
-	if (frame == null) {
-	    return null;
+	NettyMessage message = (NettyMessage) msg;
+	// 返回心跳应答消息
+	if (message.getHeader() != null
+		&& message.getHeader().getType() == MessageType.HEARTBEAT_REQ
+			.value()) {
+	    LOG.info("Receive client heart beat message : ---> "
+		    + message);
+	    NettyMessage heartBeat = buildHeatBeat();
+	    LOG.info("Send heart beat response message to client : ---> "
+			    + heartBeat);
+	    ctx.writeAndFlush(heartBeat);
+	} else{
+		ctx.fireChannelRead(msg);
 	}
 
+    }
+
+    private NettyMessage buildHeatBeat() {
 	NettyMessage message = new NettyMessage();
 	Header header = new Header();
-	header.setCrcCode(frame.readInt());
-	header.setLength(frame.readInt());
-	header.setSessionID(frame.readLong());
-	header.setType(frame.readByte());
-	header.setPriority(frame.readByte());
-	if (frame.readableBytes() > 4) {
-	    message.setBody(marshallingDecoder.decode(frame));
-	}
+	header.setType(MessageType.HEARTBEAT_RESP.value());
 	message.setHeader(header);
 	return message;
     }
+
 }

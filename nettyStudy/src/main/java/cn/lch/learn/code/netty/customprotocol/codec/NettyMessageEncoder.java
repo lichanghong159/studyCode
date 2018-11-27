@@ -1,56 +1,62 @@
+/*
+ * Copyright 2013-2018 Lilinfeng.
+ *  
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package cn.lch.learn.code.netty.customprotocol.codec;
-import cn.lch.learn.code.netty.customprotocol.msg.Header;
-import cn.lch.learn.code.netty.customprotocol.msg.NettyMessage;
+
+import cn.lch.learn.code.netty.customprotocol.struct.NettyMessage;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.Map;
 
 
 /**
- * <p>消息编码</p>
- *
- * @author lichanghong  create by  2018/11/14 13:47
- **/
-public class NettyMessageEncoder extends MessageToByteEncoder<NettyMessage> {
-    private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
+ * @author Lilinfeng
+ * @date 2014年3月14日
+ * @version 1.0
+ */
+public final class NettyMessageEncoder extends
+		MessageToByteEncoder<NettyMessage> {
+
     MarshallingEncoder marshallingEncoder;
-    public  NettyMessageEncoder() throws IOException {
-        this.marshallingEncoder = new MarshallingEncoder();
+
+    public NettyMessageEncoder() throws IOException {
+	this.marshallingEncoder = new MarshallingEncoder();
     }
+
     @Override
-    protected void encode(ChannelHandlerContext ctx, NettyMessage msg, ByteBuf out) throws Exception {
-        if(msg == null || msg.getHeader()==null){
-            throw new NullPointerException("需要编码的消息为空");
-        }
+    protected void encode(ChannelHandlerContext ctx, NettyMessage msg,
+	    ByteBuf sendBuf) throws Exception {
+	if (msg == null || msg.getHeader() == null){
+		throw new Exception("The encode message is null");
+	}
 
-        Header header = msg.getHeader();
-        out.writeInt(header.getCrcCode());
-        out.writeInt(header.getLength());
-        out.writeLong(header.getSessionId());
-        out.writeByte(header.getType());
-        out.writeByte(header.getPriority());
-        out.writeInt(header.getAttachment().size());
-        header.getAttachment().forEach((key,value)->{
-            try {
-                byte[] keyArray = key.getBytes("UTF-8");
-                out.writeInt(keyArray.length);
-                out.readBytes(keyArray);
-                marshallingEncoder.encode(value, out);
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-        if(msg.getBody() != null){
-            marshallingEncoder.encode(msg.getBody(), out);
-        }else{
-            out.writeInt(0);
-        }
-        out.setInt(4, out.readableBytes() - 8);
+	sendBuf.writeInt((msg.getHeader().getCrcCode()));
+	sendBuf.writeInt((msg.getHeader().getLength()));
+	sendBuf.writeLong((msg.getHeader().getSessionID()));
+	sendBuf.writeByte((msg.getHeader().getType()));
+	sendBuf.writeByte((msg.getHeader().getPriority()));
+
+	if (msg.getBody() != null) {
+	    marshallingEncoder.encode(msg.getBody(), sendBuf);
+	} else{
+		sendBuf.writeInt(0);
+
+	}
+		sendBuf.setInt(4, sendBuf.readableBytes() - 8);
     }
-
 }
